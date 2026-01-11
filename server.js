@@ -25,8 +25,8 @@ app.use(helmet({
 app.use(cors({
     origin: [
         "http://localhost:3000",
-        "https://portfoliop-pauly.onrender.com", // My best guess for frontend URL based on backend name
-        /\.onrender\.com$/ // Allow all onrender subdomains as safety
+        "https://portfoliop-backend.onrender.com",
+        /\.onrender\.com$/
     ],
     credentials: true
 }));
