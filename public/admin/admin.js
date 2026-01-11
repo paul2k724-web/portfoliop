@@ -90,7 +90,7 @@ async function loadProjects() {
                 </div>
             </div>
             <div class="actions">
-                <button class="btn-delete" onclick="deleteProject(${p.id})">Delete</button>
+                <button class="btn-delete" onclick="deleteProject('${p.id}')">Delete</button>
             </div>
         </div>
     `).join('');
@@ -101,9 +101,9 @@ document.getElementById('project-form').addEventListener('submit', async (e) => 
     const formData = new FormData();
     formData.append('title', document.getElementById('p-title').value);
     formData.append('short_description', document.getElementById('p-short-desc').value);
-    formData.append('tech_stack', JSON.stringify(document.getElementById('p-tech-stack').value.split(',').map(s => s.trim())));
-    formData.append('demo_url', document.getElementById('p-demo').value);
-    formData.append('repo_url', document.getElementById('p-repo').value);
+
+    // Tech stack, demo_url, and repo_url are currently ignored in this minimal Appwrite migration
+    // unless you add these attributes to your Appwrite collection.
 
     const fileInput = document.getElementById('p-image');
     if (fileInput.files[0]) {
@@ -127,63 +127,20 @@ async function deleteProject(id) {
 }
 
 
-// --- CERTIFICATES ---
+// --- CERTIFICATES (Disabled/Static) ---
 async function loadCerts() {
-    const res = await fetch(`${API_URL}/certificates`);
-    const certs = await res.json();
+    // Return or show a message that certificates are managed in HTML
     const list = document.getElementById('certs-list');
-    list.innerHTML = certs.map(c => `
-        <div class="list-item">
-            <div class="item-info">
-                <div>
-                    <h3>${c.title}</h3>
-                    <p style="color:#aaa; font-size:0.8rem;">${c.status} - ${c.issuer || ''}</p>
-                </div>
-            </div>
-            <div class="actions">
-                <button class="btn-delete" onclick="deleteCert(${c.id})">Delete</button>
-            </div>
-        </div>
-    `).join('');
+    list.innerHTML = '<p style="padding: 20px; color:#888;">Certificates are now static. Update them directly in index.html.</p>';
 }
 
 document.getElementById('cert-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = {
-        title: document.getElementById('c-title').value,
-        issuer: document.getElementById('c-issuer').value,
-        issue_date: document.getElementById('c-date').value,
-        credential_url: document.getElementById('c-url').value,
-        status: document.getElementById('c-status').value,
-        progress_percent: document.getElementById('c-progress').value
-    };
-
-    try {
-        const res = await fetch(`${API_URL}/certificates`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-
-        if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.error || 'Failed to add certificate');
-        }
-
-        alert('Certificate Added Successfully!');
-        closeModals();
-        loadCerts();
-        e.target.reset();
-    } catch (err) {
-        console.error(err);
-        alert('Error adding certificate: ' + err.message);
-    }
+    alert('Certificates are now static. Please update the index.html file to manage your certificates.');
 });
 
 async function deleteCert(id) {
-    if (!confirm('Are you sure?')) return;
-    await fetch(`${API_URL}/certificates/${id}`, { method: 'DELETE' });
-    loadCerts();
+    alert('Action disabled. Certificates are now static.');
 }
 
 

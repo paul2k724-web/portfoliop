@@ -462,25 +462,36 @@ async function fetchProjects() {
 
 async function fetchCertificates() {
     try {
-        const res = await fetch('/api/certificates');
-        const certs = await res.json();
-        const container = document.getElementById('certs-list-container');
+        // Static certifications as per user request for simpler management
+        const certs = [
+            {
+                title: "Meta Front-End Developer",
+                issuer: "Coursera / Meta",
+                status: "Completed",
+                progress_percent: 100,
+                credential_url: "#"
+            },
+            {
+                title: "AWS Cloud Practitioner",
+                issuer: "Amazon Web Services",
+                status: "In Progress",
+                progress_percent: 65,
+                credential_url: ""
+            }
+        ];
 
-        if (!certs || certs.length === 0) {
-            container.innerHTML = '<p style="grid-column: 1/-1; text-align:center; color: #888;">No certifications added yet.</p>';
-            return;
-        }
+        const container = document.getElementById('certs-list-container');
+        if (!container) return;
 
         container.innerHTML = certs.map(c => {
             const statusClass = c.status.toLowerCase().replace(' ', '-');
             let iconClass = 'fa-certificate';
             // Simple icon selection logic
             const title = c.title.toLowerCase();
-            if (title.includes('aws')) iconClass = 'fa-aws';
+            if (title.includes('aws') || title.includes('amazon')) iconClass = 'fa-aws';
+            else if (title.includes('meta') || title.includes('facebook')) iconClass = 'fa-code';
             else if (title.includes('security') || title.includes('cyber')) iconClass = 'fa-shield-halved';
             else if (title.includes('cloud')) iconClass = 'fa-cloud';
-            else if (title.includes('test') || title.includes('qa')) iconClass = 'fa-bug';
-            else if (title.includes('code') || title.includes('dev')) iconClass = 'fa-code';
 
             const cardContent = `
                 <div class="cert-badge ${statusClass}">
@@ -491,7 +502,7 @@ async function fetchCertificates() {
                 </div>
                 <h3 class="cert-title">
                     ${c.title}
-                    ${c.credential_url ? `<a href="${c.credential_url}" target="_blank" style="color:inherit; margin-left:8px;"><i class="fas fa-external-link-alt" style="font-size:0.8em; opacity:0.7;"></i></a>` : ''}
+                    ${c.credential_url && c.credential_url !== '#' ? `<a href="${c.credential_url}" target="_blank" style="color:inherit; margin-left:8px;"><i class="fas fa-external-link-alt" style="font-size:0.8em; opacity:0.7;"></i></a>` : ''}
                 </h3>
                 <p class="cert-description">${c.issuer || ''}</p>
                 <div class="cert-progress">

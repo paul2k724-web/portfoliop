@@ -24,7 +24,19 @@ Render is great because it handles the server setup for you.
 5.  **Environment Variables**:
     *   Add `JWT_SECRET` -> (Generate a random string).
 
-## Option 2: VPS (DigitalOcean / Linode / Hetzner) - Recommended for Control
+## Option 2: Railway (Best for Easy Volumes)
+Railway is excellent for Node + SQLite because it has a very simple system for "Volumes" (persistent folders).
+
+1.  **Create Project**: Go to [railway.app](https://railway.app/) and create a new project from your GitHub repo.
+2.  **Add a Volume**:
+    *   In the service settings, go to **Volumes** and click "Add Volume".
+    *   Mount it to `/app/uploads` (or the root if desired).
+    *   Update your `.env` variables in Railway (`JWT_SECRET`).
+3.  **Deployment**: Railway will automatically build and start your Node app.
+
+---
+
+## Option 3: VPS (DigitalOcean / Linode / Hetzner) - Recommended for Control
 A Virtual Private Server (VPS) acts just like your local computer. It's the most robust way to host a Node+SQLite app.
 
 1.  **Get a VPS**: Buy a small droplet (e.g., Ubuntu 22.04) on DigitalOcean (~$4/mo).
