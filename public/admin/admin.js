@@ -8,7 +8,7 @@ const dashboard = document.getElementById('dashboard');
 // --- AUTH ---
 async function checkAuth() {
     try {
-        const res = await fetch(`${API_URL}/check-auth`);
+        const res = await fetch(`${API_URL}/check-auth`, { credentials: 'include' });
         if (res.ok) {
             showDashboard();
         } else {
@@ -28,7 +28,8 @@ loginForm.addEventListener('submit', async (e) => {
         const res = await fetch(`${API_URL}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password }),
+            credentials: 'include'
         });
 
         if (res.ok) {
@@ -55,7 +56,7 @@ function showDashboard() {
 }
 
 async function logout() {
-    await fetch(`${API_URL}/logout`, { method: 'POST' });
+    await fetch(`${API_URL}/logout`, { method: 'POST', credentials: 'include' });
     location.reload();
 }
 
@@ -77,7 +78,7 @@ function switchTab(tabId) {
 
 // --- PROJECTS ---
 async function loadProjects() {
-    const res = await fetch(`${API_URL}/projects`);
+    const res = await fetch(`${API_URL}/projects`, { credentials: 'include' });
     const projects = await res.json();
     const list = document.getElementById('projects-list');
     list.innerHTML = projects.map(p => `
@@ -112,7 +113,8 @@ document.getElementById('project-form').addEventListener('submit', async (e) => 
 
     await fetch(`${API_URL}/projects`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include'
     });
 
     closeModals();
@@ -122,7 +124,7 @@ document.getElementById('project-form').addEventListener('submit', async (e) => 
 
 async function deleteProject(id) {
     if (!confirm('Are you sure?')) return;
-    await fetch(`${API_URL}/projects/${id}`, { method: 'DELETE' });
+    await fetch(`${API_URL}/projects/${id}`, { method: 'DELETE', credentials: 'include' });
     loadProjects();
 }
 

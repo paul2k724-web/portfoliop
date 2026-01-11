@@ -15,7 +15,16 @@ const cookieParser = require('cookie-parser');
 app.use(helmet({
     contentSecurityPolicy: false,
 }));
-app.use(cors());
+
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
+
+app.get('/healthz', (req, res) => {
+    res.status(200).send('OK');
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -56,25 +65,35 @@ app.post('/api/login', async (req, res) => {
         const account = createUserClient();
         const session = await account.createEmailPasswordSession(email, password);
 
-        // 2. Manage Admin Record with Admin Client (WITH API KEY)
-        const { databases } = createAdminClient();
-        const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
-            Query.equal('email', email)
-        ]);
-
-        if (admins.total === 0) {
-            await databases.createDocument(config.dbId, config.adminsCollectionId, ID.unique(), {
-                email: email,
-                role: 'owner'
-            });
-        }
-
-        res.cookie('sessionId', session.$id, { httpOnly: true, secure: true, sameSite: 'strict' });
-        res.cookie('userEmail', email, { httpOnly: true, secure: true, sameSite: 'strict' });
+        // 2. Set Cookies and respond IMMEDIATELY
+        // Use sameSite: 'none' and secure: true for cross-origin production cookies
+        res.cookie('sessionId', session.$id, { httpOnly: true, secure: true, sameSite: 'none' });
+        res.cookie('userEmail', email, { httpOnly: true, secure: true, sameSite: 'none' });
         res.json({ success: true, message: "Login successful" });
+
+        // 3. Post-login: Manage Admin Record with Admin Client (WITH API KEY) ASYNCHRONOUSLY
+        (async () => {
+            try {
+                const { databases } = createAdminClient();
+                const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
+                    Query.equal('email', email)
+                ]);
+
+                if (admins.total === 0) {
+                    await databases.createDocument(config.dbId, config.adminsCollectionId, ID.unique(), {
+                        email: email,
+                        role: 'owner'
+                    });
+                }
+            } catch (adminErr) {
+                console.error("Post-login admin registration error:", adminErr);
+            }
+        })();
+
     } catch (err) {
         console.error("Login Error:", err);
-        res.status(401).json({ error: "Invalid credentials or unauthorized" });
+        // Return exact Appwrite error message
+        res.status(401).json({ error: err.message || "Unauthorized" });
     }
 });
 
