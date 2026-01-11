@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
-const { databases, storage: appwriteStorage, account, config, client } = require('./appwrite');
+const { createUserClient, createAdminClient, config } = require('./appwrite');
 const { ID, Query } = require('node-appwrite');
 
 const app = express();
@@ -30,16 +30,10 @@ const authenticateToken = async (req, res, next) => {
     if (!sessionId) return res.status(401).json({ error: "Access denied" });
 
     try {
-        // In Appwrite Server SDK, we can't easily verify a client session ID directly 
-        // without the client's JWT or specific headers. 
-        // However, for this project's requirements, we will assume the sessionId represents a valid Appwrite session.
-        // We will attempt to get the user using the session.
-        // NOTE: The Server SDK usually uses API Keys. 
-        // For minimal changes, we'll validate if the user is in the 'admins' collection.
-        // We'll store the email in the cookie for simplicity in this beginner-friendly refactor.
         const userEmail = req.cookies.userEmail;
         if (!userEmail) throw new Error("No user email found");
 
+        const { databases } = createAdminClient();
         const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
             Query.equal('email', userEmail)
         ]);
@@ -55,20 +49,15 @@ const authenticateToken = async (req, res, next) => {
 
 // --- AUTHENTICATION ---
 app.post('/api/login', async (req, res) => {
-    const { username: email, password } = req.body; // Map username field to email
+    const { username: email, password } = req.body;
 
     try {
-        // Appwrite Login (Server-side login is usually for API keys, but we can simulate session check)
-        // For a beginner-friendly setup, we'll verify the user exists and password is correct via the 'Account' API
-        // But the Account API in Server SDK requires a session or JWT.
-        // Actually, the easiest way for a Node backend to "log in" is to use the Appwrite Console to create the user,
-        // and here we just check if they are authorized.
-
-        // Since we want to keep the frontend UNCHANGED, we'll use the Appwrite Account API
-        // to verify credentials.
+        // 1. Authenticate with User Client (NO API KEY)
+        const account = createUserClient();
         const session = await account.createEmailPasswordSession(email, password);
 
-        // On success, check/register admin
+        // 2. Manage Admin Record with Admin Client (WITH API KEY)
+        const { databases } = createAdminClient();
         const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
             Query.equal('email', email)
         ]);
@@ -104,17 +93,17 @@ app.get('/api/check-auth', authenticateToken, (req, res) => {
 // Get All Projects
 app.get('/api/projects', async (req, res) => {
     try {
+        const { databases } = createAdminClient();
         const response = await databases.listDocuments(config.dbId, config.projectsCollectionId, [
             Query.orderDesc('$createdAt')
         ]);
 
-        // Map Appwrite fields back to what the Frontend expects
         const projects = response.documents.map(doc => ({
             id: doc.$id,
             title: doc.projectName,
             short_description: doc.description,
-            full_description: doc.description, // Mapping both to description for now
-            tech_stack: [], // Placeholder since Appwrite spec didn't include it
+            full_description: doc.description,
+            tech_stack: [],
             image_url: doc.imageUrl,
             created_at: doc.startDate || doc.$createdAt
         }));
@@ -132,10 +121,10 @@ app.post('/api/projects', authenticateToken, upload.single('image'), async (req,
     const { title, short_description } = req.body;
 
     try {
+        const { databases, storage } = createAdminClient();
         let imageUrl = null;
         if (req.file) {
-            const file = await appwriteStorage.createFile(config.bucketId, ID.unique(), req.file.path);
-            // Construct the public URL for the image
+            const file = await storage.createFile(config.bucketId, ID.unique(), req.file.path);
             imageUrl = `${process.env.APPWRITE_ENDPOINT}/storage/buckets/${config.bucketId}/files/${file.$id}/view?project=${process.env.APPWRITE_PROJECT_ID}`;
         }
 
@@ -155,6 +144,7 @@ app.post('/api/projects', authenticateToken, upload.single('image'), async (req,
 // Delete Project
 app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
     try {
+        const { databases } = createAdminClient();
         await databases.deleteDocument(config.dbId, config.projectsCollectionId, req.params.id);
         res.json({ message: "Project deleted" });
     } catch (err) {
@@ -162,13 +152,9 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Certificates Routes (Now Static placeholders or removed as per user request)
+// Certificates
 app.get('/api/certificates', (req, res) => {
-    res.json([]); // Return empty as they are static now
-});
-
-app.post('/api/certificates', authenticateToken, (req, res) => {
-    res.status(405).json({ error: "Certificates are now static. Update them in the frontend directly." });
+    res.json([]);
 });
 
 // Serve Admin Panel
@@ -179,4 +165,5 @@ app.get('/admin', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+
 
