@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
 const { userAccount, databases, storage, config } = require('./appwrite');
-const { ID, Query } = require('node-appwrite');
+const { ID, Query, InputFile } = require('node-appwrite');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -185,7 +185,11 @@ app.post('/api/projects', authenticateToken, upload.single('image'), async (req,
     try {
         let imageUrl = null;
         if (req.file) {
-            const file = await storage.createFile(config.bucketId, ID.unique(), req.file.path);
+            const file = await storage.createFile(
+                config.bucketId,
+                ID.unique(),
+                InputFile.fromPath(req.file.path, req.file.originalname)
+            );
             imageUrl = `${process.env.APPWRITE_ENDPOINT}/storage/buckets/${config.bucketId}/files/${file.$id}/view?project=${process.env.APPWRITE_PROJECT_ID}`;
         }
 
@@ -243,7 +247,11 @@ app.post('/api/certificates', authenticateToken, upload.single('image'), async (
     try {
         let imageUrl = null;
         if (req.file) {
-            const file = await storage.createFile(config.bucketId, ID.unique(), req.file.path);
+            const file = await storage.createFile(
+                config.bucketId,
+                ID.unique(),
+                InputFile.fromPath(req.file.path, req.file.originalname)
+            );
             imageUrl = `${process.env.APPWRITE_ENDPOINT}/storage/buckets/${config.bucketId}/files/${file.$id}/view?project=${process.env.APPWRITE_PROJECT_ID}`;
         }
         const cert = await databases.createDocument(config.dbId, config.certificatesCollectionId, ID.unique(), {
