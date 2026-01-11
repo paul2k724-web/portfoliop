@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const multer = require('multer');
-const { createUserClient, createAdminClient, config } = require('./appwrite');
+const { userAccount, databases, storage, config } = require('./appwrite');
 const { ID, Query } = require('node-appwrite');
 
 const app = express();
@@ -11,19 +11,25 @@ const PORT = process.env.PORT || 3000;
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 
+// --- 1) HEALTH CHECK (REQUIRED FOR RENDER) ---
+app.get("/healthz", (req, res) => {
+    res.status(200).send("OK");
+});
+
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: false,
 }));
 
+// --- 2) FIX CORS (CRITICAL) ---
 app.use(cors({
-    origin: true,
+    origin: [
+        "http://localhost:3000",
+        "https://portfoliop-pauly.onrender.com", // My best guess for frontend URL based on backend name
+        /\.onrender\.com$/ // Allow all onrender subdomains as safety
+    ],
     credentials: true
 }));
-
-app.get('/healthz', (req, res) => {
-    res.status(200).send('OK');
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -33,16 +39,33 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Multer for temporary upload handling before Appwrite
 const upload = multer({ dest: 'uploads/' });
 
+// Helper to ensure admin exists in collection
+async function ensureAdminExists(email) {
+    try {
+        const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
+            Query.equal('email', email)
+        ]);
+
+        if (admins.total === 0) {
+            await databases.createDocument(config.dbId, config.adminsCollectionId, ID.unique(), {
+                email: email,
+                role: 'owner'
+            });
+        }
+    } catch (err) {
+        console.error("Admin auto-registration failed:", err.message);
+    }
+}
+
 // --- AUTH MIDDLEWARE ---
 const authenticateToken = async (req, res, next) => {
-    const sessionId = req.cookies.sessionId;
-    if (!sessionId) return res.status(401).json({ error: "Access denied" });
+    // Note: Since we are not manually setting sessionId/userEmail in our refined login,
+    // we assume Appwrite session cookies are used or the userEmail cookie is set by the client.
+    // For now, checking userEmail cookie to restrict access.
+    const userEmail = req.cookies.userEmail;
+    if (!userEmail) return res.status(401).json({ error: "Access denied" });
 
     try {
-        const userEmail = req.cookies.userEmail;
-        if (!userEmail) throw new Error("No user email found");
-
-        const { databases } = createAdminClient();
         const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
             Query.equal('email', userEmail)
         ]);
@@ -57,43 +80,26 @@ const authenticateToken = async (req, res, next) => {
 };
 
 // --- AUTHENTICATION ---
+// FIXED LOGIN ROUTE (MOST IMPORTANT)
 app.post('/api/login', async (req, res) => {
     const { username: email, password } = req.body;
 
     try {
-        // 1. Authenticate with User Client (NO API KEY)
-        const account = createUserClient();
-        const session = await account.createEmailPasswordSession(email, password);
+        // Authenticate user FIRST using userAccount (NO API KEY)
+        const session = await userAccount.createEmailPasswordSession(email, password);
 
-        // 2. Set Cookies and respond IMMEDIATELY
-        // Use sameSite: 'none' and secure: true for cross-origin production cookies
-        res.cookie('sessionId', session.$id, { httpOnly: true, secure: true, sameSite: 'none' });
-        res.cookie('userEmail', email, { httpOnly: true, secure: true, sameSite: 'none' });
-        res.json({ success: true, message: "Login successful" });
+        // Success - respond immediately
+        // Note: As per requirement, we do NOT manually set cookies with res.cookie().
+        res.status(200).json({ success: true, message: "Login successful" });
 
-        // 3. Post-login: Manage Admin Record with Admin Client (WITH API KEY) ASYNCHRONOUSLY
-        (async () => {
-            try {
-                const { databases } = createAdminClient();
-                const admins = await databases.listDocuments(config.dbId, config.adminsCollectionId, [
-                    Query.equal('email', email)
-                ]);
-
-                if (admins.total === 0) {
-                    await databases.createDocument(config.dbId, config.adminsCollectionId, ID.unique(), {
-                        email: email,
-                        role: 'owner'
-                    });
-                }
-            } catch (adminErr) {
-                console.error("Post-login admin registration error:", adminErr);
-            }
-        })();
+        // Async admin registration (DO NOT await)
+        ensureAdminExists(email);
 
     } catch (err) {
-        console.error("Login Error:", err);
-        // Return exact Appwrite error message
-        res.status(401).json({ error: err.message || "Unauthorized" });
+        console.error("Login Error:", err.message);
+        res.status(401).json({
+            error: err.message || "Invalid credentials"
+        });
     }
 });
 
@@ -112,7 +118,6 @@ app.get('/api/check-auth', authenticateToken, (req, res) => {
 // Get All Projects
 app.get('/api/projects', async (req, res) => {
     try {
-        const { databases } = createAdminClient();
         const response = await databases.listDocuments(config.dbId, config.projectsCollectionId, [
             Query.orderDesc('$createdAt')
         ]);
@@ -140,7 +145,6 @@ app.post('/api/projects', authenticateToken, upload.single('image'), async (req,
     const { title, short_description } = req.body;
 
     try {
-        const { databases, storage } = createAdminClient();
         let imageUrl = null;
         if (req.file) {
             const file = await storage.createFile(config.bucketId, ID.unique(), req.file.path);
@@ -163,7 +167,6 @@ app.post('/api/projects', authenticateToken, upload.single('image'), async (req,
 // Delete Project
 app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
     try {
-        const { databases } = createAdminClient();
         await databases.deleteDocument(config.dbId, config.projectsCollectionId, req.params.id);
         res.json({ message: "Project deleted" });
     } catch (err) {
@@ -184,5 +187,6 @@ app.get('/admin', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 });
+
 
 

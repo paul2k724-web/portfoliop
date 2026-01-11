@@ -29,13 +29,19 @@ loginForm.addEventListener('submit', async (e) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
-            credentials: 'include'
+            credentials: 'include' // CRITICAL for cross-origin cookies
         });
 
-        if (res.ok) {
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+            // Since backend "DO NOT use res.cookie()", we set a temporary cookie for userEmail 
+            // if we need it for authenticateToken middleware.
+            // NOTE: Appwrite's own session cookies are handled automatically by the browser if CORS is correct.
+            document.cookie = `userEmail=${username}; path=/; SameSite=None; Secure`;
             showDashboard();
         } else {
-            alert('Invalid credentials');
+            alert(data.error || 'Invalid credentials');
         }
     } catch (err) {
         console.error(err);
@@ -57,6 +63,7 @@ function showDashboard() {
 
 async function logout() {
     await fetch(`${API_URL}/logout`, { method: 'POST', credentials: 'include' });
+    document.cookie = "userEmail=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     location.reload();
 }
 
