@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #00f0ff;
+            --secondary-color: #7b2dff;
+            --bg-dark: #0a0a0f;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Login Screen */
+        #login-screen {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--border);
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #a0a0b0;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 0.8rem;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        /* Dashboard */
+        #dashboard {
+            display: none;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            width: auto;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: black;
+        }
+
+        .section-view {
+            display: none;
+        }
+
+        .section-view.active {
+            display: block;
+        }
+
+        .list-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 1rem;
+        }
+
+        .item-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-delete {
+            background: #ff4757;
+            width: auto;
+            padding: 0.5rem 1rem;
+        }
+
+        .btn-add {
+            width: auto;
+            margin-bottom: 1rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a20;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login -->
+    <section id="login-screen">
+        <div class="login-card">
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">Admin Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard" class="container">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <button onclick="logout()" style="width: auto; background: #333;">Logout</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('projects-view')">Projects</button>
+            <button class="tab-btn" onclick="switchTab('certs-view')">Certificates</button>
+        </div>
+
+        <!-- Projects View -->
+        <div id="projects-view" class="section-view active">
+            <button class="btn-add" onclick="openProjectModal()">+ Add New Project</button>
+            <div id="projects-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Certificates View -->
+        <div id="certs-view" class="section-view">
+            <button class="btn-add" onclick="openCertModal()">+ Add New Certificate</button>
+            <div id="certs-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Project Modal -->
+    <div id="project-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="project-modal-title">Add Project</h2>
+            <form id="project-form">
+                <input type="hidden" id="p-id">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="p-title" required>
+                </div>
+                <div class="form-group">
+                    <label>Short Description</label>
+                    <textarea id="p-short-desc" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tech Stack (comma separated)</label>
+                    <input type="text" id="p-tech-stack" placeholder="HTML, CSS, JS">
+                </div>
+                <div class="form-group">
+                    <label>Image</label>
+                    <input type="file" id="p-image">
+                </div>
+                <div class="form-group">
+                    <label>Demo URL</label>
+                    <input type="text" id="p-demo">
+                </div>
+                <div class="form-group">
+                    <label>Repo URL</label>
+                    <input type="text" id="p-repo">
+                </div>
+                <button type="submit">Save Project</button>
+                <button type="button" onclick="closeModals()"
+                    style="background: #333; margin-top: 10px;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Certificate Modal -->
+    <div id="cert-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="cert-modal-title">Add Certificate</h2>
+            <form id="cert-form">
+                <input type="hidden" id="c-id">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="c-title" required>
+                </div>
+                <div class="form-group">
+                    <label>Issuer</label>
+                    <input type="text" id="c-issuer">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="c-status">
+                        <option value="Completed">Completed</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Upcoming">Upcoming</option>
+                        <option value="Planned">Planned</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Issue Date</label>
+                    <input type="date" id="c-date">
+                </div>
+                <div class="form-group">
+                    <label>Credential URL</label>
+                    <input type="url" id="c-url" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Progress (%)</label>
+                    <input type="number" id="c-progress" value="100">
+                </div>
+                <button type="submit">Save Certificate</button>
+                <button type="button" onclick="closeModals()"
+                    style="background: #333; margin-top: 10px;">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+
+</html>
